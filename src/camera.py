@@ -53,7 +53,7 @@ class Camera:
         :return: A tuple containing a boolean and the frame. The boolean is True if the frame was successfully read, False otherwise.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.is_started: # Check if camera is started
+            if self.picam2.started: # Check if camera is started
                 frame = self.picam2.capture_array()
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) # Convert RGB to BGR for OpenCV
                 return True, frame
@@ -69,7 +69,7 @@ class Camera:
         Releases the camera.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.is_started: # Check if camera is started
+            if self.picam2.started: # Check if camera is started
                 self.picam2.stop()
         else:
             if self.cap is not None:
