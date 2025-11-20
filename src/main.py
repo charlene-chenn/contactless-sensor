@@ -1,12 +1,9 @@
 import json
-
-import cv2
 import numpy as np
-
+import cv2
 from .camera import Camera
-from .detection import find_ball
-from .ui import destroy_windows, display_frame, handle_input
-
+from .detection import find_ball, find_rod
+from .ui import display_frame, handle_input, destroy_windows
 
 def get_available_cameras():
     """
@@ -24,7 +21,6 @@ def get_available_cameras():
         index += 1
     return available_cameras
 
-
 def main():
     """
     Main function for the contactless sensor application.
@@ -34,7 +30,8 @@ def main():
         config = json.load(f)
 
     camera_index = config.get('camera_index', 0)
-
+    mode = config.get('mode', 'two_balls')
+    
     # Initialize camera
     camera = Camera(camera_index)
     if not camera.initialize():
@@ -54,7 +51,7 @@ def main():
         except ValueError:
             print("Invalid input. Exiting.")
             return
-
+        
         config['camera_index'] = camera_index
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=4)
@@ -67,11 +64,14 @@ def main():
     ball_colors = config.get('ball_colors', {})
     pivot_color = ball_colors.get('pivot', {})
     moving_color = ball_colors.get('moving', {})
+    rod_color = config.get('rod_color', {})
 
     lower_pivot_hsv = np.array(pivot_color.get('lower', [0, 0, 0]))
     upper_pivot_hsv = np.array(pivot_color.get('upper', [179, 255, 255]))
     lower_moving_hsv = np.array(moving_color.get('lower', [0, 0, 0]))
     upper_moving_hsv = np.array(moving_color.get('upper', [179, 255, 255]))
+    lower_rod_hsv = np.array(rod_color.get('lower', [0, 0, 0]))
+    upper_rod_hsv = np.array(rod_color.get('upper', [179, 255, 255]))
 
     while True:
         # Read frame
@@ -79,12 +79,16 @@ def main():
         if not ret:
             break
 
-        # Detect balls
-        pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
-        moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
-
-        # Display frame
-        display_frame(frame, pivot_center, moving_center)
+        if mode == 'two_balls':
+            # Detect balls
+            pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
+            moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+            display_frame(frame, pivot_center=pivot_center, moving_center=moving_center)
+        
+        elif mode == 'rod_and_ball':
+            rod_endpoints = find_rod(frame, lower_rod_hsv, upper_rod_hsv)
+            moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+            display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints)
 
         # Handle input
         if handle_input():
@@ -93,7 +97,6 @@ def main():
     # Release resources
     camera.release()
     destroy_windows()
-
 
 if __name__ == "__main__":
     main()

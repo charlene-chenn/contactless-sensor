@@ -85,10 +85,11 @@ def main():
     cv2.createTrackbar("V Range", "Trackbars", v_range, 127, lambda x: None)
 
 
-    print("Click on the ball to select its color.")
+    print("Click on the object to select its color.")
     print("Adjust the trackbars to fine-tune the mask.")
     print("Press 's' to save the color for the 'pivot' ball.")
     print("Press 'm' to save the color for the 'moving' ball.")
+    print("Press 'r' to save the color for the 'rod'.")
     print("Press 'q' to quit.")
 
     while True:
@@ -116,22 +117,30 @@ def main():
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif key == ord('s') or key == ord('m'):
+        elif key in [ord('s'), ord('m'), ord('r')]:
             if hsv_color is not None:
-                ball_type = 'pivot' if key == ord('s') else 'moving'
                 
-                lower_bound = [int(max(0, hsv_color[0] - h_range)), int(max(0, hsv_color[1] - s_range)), int(max(0, hsv_color[2] - v_range))]
-                upper_bound = [int(min(179, hsv_color[0] + h_range)), int(min(255, hsv_color[1] + s_range)), int(min(255, hsv_color[2] + v_range))]
+                lower_bound_val = [int(max(0, hsv_color[0] - h_range)), int(max(0, hsv_color[1] - s_range)), int(max(0, hsv_color[2] - v_range))]
+                upper_bound_val = [int(min(179, hsv_color[0] + h_range)), int(min(255, hsv_color[1] + s_range)), int(min(255, hsv_color[2] + v_range))]
 
-                config['ball_colors'][ball_type]['lower'] = lower_bound
-                config['ball_colors'][ball_type]['upper'] = upper_bound
-                
+                if key == ord('s'):
+                    config['ball_colors']['pivot']['lower'] = lower_bound_val
+                    config['ball_colors']['pivot']['upper'] = upper_bound_val
+                    print(f"Saved color for 'pivot' ball to config.json")
+                elif key == ord('m'):
+                    config['ball_colors']['moving']['lower'] = lower_bound_val
+                    config['ball_colors']['moving']['upper'] = upper_bound_val
+                    print(f"Saved color for 'moving' ball to config.json")
+                elif key == ord('r'):
+                    config['rod_color']['lower'] = lower_bound_val
+                    config['rod_color']['upper'] = upper_bound_val
+                    print(f"Saved color for 'rod' to config.json")
+
                 with open('config.json', 'w') as f:
                     json.dump(config, f, indent=4)
                 
-                print(f"Saved color for '{ball_type}' ball to config.json")
             else:
-                print("Please select a color first by clicking on the ball.")
+                print("Please select a color first by clicking on the object.")
 
 
     cap.release()
