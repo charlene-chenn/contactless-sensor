@@ -1,6 +1,19 @@
 import cv2
 import numpy as np
 
+def create_mask(image: np.ndarray, lower_hsv: np.ndarray, upper_hsv: np.ndarray):
+    """
+    Creates a mask for a given color range in an image.
+
+    :param image: The image to process.
+    :param lower_hsv: The lower bound of the color to search for in HSV.
+    :param upper_hsv: The upper bound of the color to search for in HSV.
+    :return: The generated mask.
+    """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
+    return mask
+
 def find_ball(image: np.ndarray, lower_hsv: np.ndarray, upper_hsv: np.ndarray):
     """
     Finds a ball of a given color in an image.
@@ -10,8 +23,7 @@ def find_ball(image: np.ndarray, lower_hsv: np.ndarray, upper_hsv: np.ndarray):
     :param upper_hsv: The upper bound of the color to search for in HSV.
     :return: The center of the ball in image coordinates, or None if no ball is found.
     """
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
+    mask = create_mask(image, lower_hsv, upper_hsv)
 
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -41,8 +53,7 @@ def find_rod(image: np.ndarray, lower_hsv: np.ndarray, upper_hsv: np.ndarray):
     :param upper_hsv: The upper bound of the color to search for in HSV.
     :return: The endpoints of the rod, or None if no rod is found.
     """
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
+    mask = create_mask(image, lower_hsv, upper_hsv)
 
     # Morphological operations to remove noise
     kernel = np.ones((5, 5), np.uint8)

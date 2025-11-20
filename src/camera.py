@@ -75,3 +75,50 @@ class Camera:
             if self.cap is not None:
                 self.cap.release()
                 self.cap = None
+
+    @staticmethod
+    def get_available_cameras():
+        """
+        Gets a list of available camera devices.
+        :return: A list of available camera indices.
+        """
+        available_cameras = []
+        index = 0
+        while True:
+            cap = cv2.VideoCapture(index)
+            if not cap.isOpened():
+                break
+            available_cameras.append(index)
+            cap.release()
+            index += 1
+        return available_cameras
+
+    @staticmethod
+    def select_camera(config: dict):
+        """
+        Prompts the user to select a camera and updates the config.
+
+        :param config: The configuration dictionary.
+        :return: The selected camera index.
+        """
+        available_cameras = Camera.get_available_cameras()
+        if not available_cameras:
+            print("Error: No cameras found.")
+            return None
+
+        print("Available cameras:", available_cameras)
+        camera_index_str = input(f"Select a camera index to use (default: {config.get('camera_index', 0)}): ")
+        if camera_index_str.strip() == "":
+            camera_index = config.get('camera_index', 0)
+        else:
+            try:
+                camera_index = int(camera_index_str)
+                if camera_index not in available_cameras:
+                    print("Invalid camera index. Using default.")
+                    camera_index = config.get('camera_index', 0)
+            except ValueError:
+                print("Invalid input. Using default camera index.")
+                camera_index = config.get('camera_index', 0)
+        
+        config['camera_index'] = camera_index
+        return camera_index

@@ -1,25 +1,8 @@
 import json
 import numpy as np
-import cv2
 from .camera import Camera
 from .detection import find_ball, find_rod
 from .ui import display_frame, handle_input, destroy_windows
-
-def get_available_cameras():
-    """
-    Gets a list of available camera devices.
-    :return: A list of available camera indices.
-    """
-    available_cameras = []
-    index = 0
-    while True:
-        cap = cv2.VideoCapture(index)
-        if not cap.isOpened():
-            break
-        available_cameras.append(index)
-        cap.release()
-        index += 1
-    return available_cameras
 
 def main():
     """
@@ -36,23 +19,10 @@ def main():
     camera = Camera(camera_index)
     if not camera.initialize():
         print(f"Could not open camera with index {camera_index} from config.")
-        available_cameras = get_available_cameras()
-        if not available_cameras:
-            print("Error: No cameras found.")
-            return
-
-        print("Available cameras:", available_cameras)
-        camera_index_str = input(f"Select a camera index to use: ")
-        try:
-            camera_index = int(camera_index_str)
-            if camera_index not in available_cameras:
-                print("Invalid camera index. Exiting.")
-                return
-        except ValueError:
-            print("Invalid input. Exiting.")
+        camera_index = Camera.select_camera(config)
+        if camera_index is None:
             return
         
-        config['camera_index'] = camera_index
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=4)
 

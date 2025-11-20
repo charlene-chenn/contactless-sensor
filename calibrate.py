@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import json
+import sys
+sys.path.append('src')
+from camera import Camera
 
 # Global variables
 hsv_color = None
@@ -20,23 +23,6 @@ def mouse_callback(event, x, y, flags, param):
         hsv_color = np.mean(region, axis=(0, 1)).astype(int)
         print(f"Selected HSV color: {hsv_color}")
 
-
-def get_available_cameras():
-    """
-    Gets a list of available camera devices.
-    :return: A list of available camera indices.
-    """
-    available_cameras = []
-    index = 0
-    while True:
-        cap = cv2.VideoCapture(index)
-        if not cap.isOpened():
-            break
-        available_cameras.append(index)
-        cap.release()
-        index += 1
-    return available_cameras
-
 def main():
     """
     Main function for the color calibration utility.
@@ -47,32 +33,16 @@ def main():
     with open('config.json', 'r') as f:
         config = json.load(f)
     
-    available_cameras = get_available_cameras()
-    if not available_cameras:
-        print("Error: No cameras found.")
+    camera_index = Camera.select_camera(config)
+    if camera_index is None:
         return
 
-    print("Available cameras:", available_cameras)
-    camera_index_str = input(f"Select a camera index to use (default: {config.get('camera_index', 0)}): ")
-    if camera_index_str.strip() == "":
-        camera_index = config.get('camera_index', 0)
-    else:
-        try:
-            camera_index = int(camera_index_str)
-            if camera_index not in available_cameras:
-                print("Invalid camera index. Using default.")
-                camera_index = config.get('camera_index', 0)
-        except ValueError:
-            print("Invalid input. Using default camera index.")
-            camera_index = config.get('camera_index', 0)
-
-    config['camera_index'] = camera_index
     with open('config.json', 'w') as f:
         json.dump(config, f, indent=4)
     
     # Initialize camera
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
+    camera = Camera(camera_index)
+    if not camera.initialize():
         print(f"Error: Could not open camera with index {camera_index}.")
         return
 
@@ -93,7 +63,7 @@ def main():
     print("Press 'q' to quit.")
 
     while True:
-        ret, frame = cap.read()
+        ret, frame = camera.read_frame()
         if not ret:
             break
 
@@ -143,7 +113,7 @@ def main():
                 print("Please select a color first by clicking on the object.")
 
 
-    cap.release()
+    camera.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
