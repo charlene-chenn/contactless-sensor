@@ -34,7 +34,7 @@ class Camera:
         """
         if self.is_rpi and Picamera2:
             try:
-                config = self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
+                config = self.picam2.create_preview_configuration(main={"format": "BGR888", "size": (640, 480)})
                 self.picam2.configure(config)
                 self.picam2.start()
                 time.sleep(0.3) # Warm-up for AE/AWB
@@ -55,7 +55,6 @@ class Camera:
         if self.is_rpi and Picamera2:
             if self.picam2.started: # Check if camera is started
                 frame = self.picam2.capture_array()
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) # Convert RGB to BGR for OpenCV
                 return True, frame
             else:
                 return False, None
