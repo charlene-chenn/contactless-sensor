@@ -1,11 +1,13 @@
-import cv2
 import platform
 import time
+
+import cv2
 
 try:
     from picamera2 import Picamera2
 except ImportError:
     Picamera2 = None
+
 
 class Camera:
     """
@@ -20,7 +22,7 @@ class Camera:
         """
         self.camera_index = camera_index
         self.is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
-        
+
         if self.is_rpi and Picamera2:
             self.picam2 = Picamera2()
         else:
@@ -34,10 +36,10 @@ class Camera:
         """
         if self.is_rpi and Picamera2:
             try:
-                config = self.picam2.create_preview_configuration(main={"format": "BGR888", "size": (640, 480)})
+                config = self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
                 self.picam2.configure(config)
                 self.picam2.start()
-                time.sleep(0.3) # Warm-up for AE/AWB
+                time.sleep(0.3)  # Warm-up for AE/AWB
                 return True
             except Exception as e:
                 print(f"Failed to initialize Raspberry Pi camera: {e}")
@@ -53,7 +55,7 @@ class Camera:
         :return: A tuple containing a boolean and the frame. The boolean is True if the frame was successfully read, False otherwise.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.started: # Check if camera is started
+            if self.picam2.started:  # Check if camera is started
                 frame = self.picam2.capture_array()
                 return True, frame
             else:
@@ -68,7 +70,7 @@ class Camera:
         Releases the camera.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.started: # Check if camera is started
+            if self.picam2.started:  # Check if camera is started
                 self.picam2.stop()
         else:
             if self.cap is not None:
@@ -118,6 +120,6 @@ class Camera:
             except ValueError:
                 print("Invalid input. Using default camera index.")
                 camera_index = config.get('camera_index', 0)
-        
+
         config['camera_index'] = camera_index
         return camera_index
