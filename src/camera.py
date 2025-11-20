@@ -1,8 +1,14 @@
 import cv2
+import platform
+
+try:
+    from picamera2 import Picamera2
+except ImportError:
+    Picamera2 = None
 
 class Camera:
     """
-    A class to handle camera operations.
+    A class to handle camera operations for both standard USB cameras and Raspberry Pi cameras.
     """
 
     def __init__(self, camera_index: int):
@@ -12,7 +18,12 @@ class Camera:
         :param camera_index: The index of the camera to use.
         """
         self.camera_index = camera_index
-        self.cap = None
+        self.is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
+        
+        if self.is_rpi and Picamera2:
+            self.picam2 = Picamera2()
+        else:
+            self.cap = None
 
     def initialize(self):
         """
@@ -20,8 +31,17 @@ class Camera:
 
         :return: True if the camera was successfully initialized, False otherwise.
         """
-        self.cap = cv2.VideoCapture(self.camera_index)
-        return self.cap.isOpened()
+        if self.is_rpi and Picamera2:
+            try:
+                self.picam2.configure(self.picam2.create_preview_configuration(main={"size": (640, 480)}))
+                self.picam2.start()
+                return True
+            except Exception as e:
+                print(f"Failed to initialize Raspberry Pi camera: {e}")
+                return False
+        else:
+            self.cap = cv2.VideoCapture(self.camera_index)
+            return self.cap.isOpened()
 
     def read_frame(self):
         """
@@ -29,14 +49,25 @@ class Camera:
 
         :return: A tuple containing a boolean and the frame. The boolean is True if the frame was successfully read, False otherwise.
         """
-        if self.cap is None:
-            return False, None
-        return self.cap.read()
+        if self.is_rpi and Picamera2:
+            if self.picam2.is_open:
+                frame = self.picam2.capture_array()
+                return True, frame
+            else:
+                return False, None
+        else:
+            if self.cap is None:
+                return False, None
+            return self.cap.read()
 
     def release(self):
         """
         Releases the camera.
         """
-        if self.cap is not None:
-            self.cap.release()
-            self.cap = None
+        if self.is_rpi and Picamera2:
+            if self.picam2.is_open:
+                self.picam2.stop()
+        else:
+            if self.cap is not None:
+                self.cap.release()
+                self.cap = None
