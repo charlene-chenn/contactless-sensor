@@ -16,7 +16,7 @@ def mouse_callback(event, x, y, flags, param):
     global hsv_color
     if event == cv2.EVENT_LBUTTONDOWN:
         frame = param
-        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         
         # Average the color of a small region
         region = hsv_frame[y-2:y+2, x-2:x+2]
