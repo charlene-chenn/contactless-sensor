@@ -1,5 +1,6 @@
 import cv2
 import platform
+import time
 
 try:
     from picamera2 import Picamera2
@@ -33,8 +34,10 @@ class Camera:
         """
         if self.is_rpi and Picamera2:
             try:
-                self.picam2.configure(self.picam2.create_preview_configuration(main={"size": (640, 480)}))
+                config = self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
+                self.picam2.configure(config)
                 self.picam2.start()
+                time.sleep(0.3) # Warm-up for AE/AWB
                 return True
             except Exception as e:
                 print(f"Failed to initialize Raspberry Pi camera: {e}")
@@ -50,8 +53,9 @@ class Camera:
         :return: A tuple containing a boolean and the frame. The boolean is True if the frame was successfully read, False otherwise.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.is_open:
+            if self.picam2.is_started: # Check if camera is started
                 frame = self.picam2.capture_array()
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) # Convert RGB to BGR for OpenCV
                 return True, frame
             else:
                 return False, None
@@ -65,7 +69,7 @@ class Camera:
         Releases the camera.
         """
         if self.is_rpi and Picamera2:
-            if self.picam2.is_open:
+            if self.picam2.is_started: # Check if camera is started
                 self.picam2.stop()
         else:
             if self.cap is not None:
