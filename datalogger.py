@@ -136,34 +136,37 @@ def main():
             last_wind_speed = None
 
             while True:
-                # Get the latest data from queues, but don't block
+                angle_updated = False
+                wind_updated = False
+
+                # Check for new angle data
                 try:
-                    # Angle is still a string from the subprocess
                     angle_line = angle_queue.get_nowait()
+                    angle_updated = True
                     try:
                         last_angle = float(angle_line)
                     except ValueError:
                         print(f"Could not parse angle value: {angle_line}")
+                        angle_updated = False # Don't log if value is bad
                 except queue.Empty:
-                    pass # No new angle data, use the last one
+                    pass
 
+                # Check for new wind speed data
                 try:
-                    # Serial data is already a float
+                    # Serial data is already a float from the reader thread
                     last_wind_speed = serial_queue.get_nowait()
+                    wind_updated = True
                 except queue.Empty:
-                    pass # No new serial data, use the last one
+                    pass
 
-                # Write a row only when we have a fresh reading from both
-                if last_angle is not None and last_wind_speed is not None:
+                # Log if either was updated and we have at least one value for both
+                if (angle_updated or wind_updated) and (last_angle is not None and last_wind_speed is not None):
                     writer.writerow({
                         'timestamp': datetime.now().isoformat(),
                         'angle': f"{last_angle:.2f}",
                         'wind_speed_ms': f"{last_wind_speed:.2f}"
                     })
                     print(f"Logged: Angle={last_angle:.2f}, Wind Speed={last_wind_speed:.2f}")
-                    # Reset them to require new readings for the next row
-                    last_angle = None
-                    last_wind_speed = None
 
                 # Check if the subprocess has terminated
                 if angle_process.poll() is not None:
@@ -171,7 +174,7 @@ def main():
                     break
                 
                 # Small delay to prevent a busy loop and reduce CPU usage
-                time.sleep(0.05)
+                time.sleep(0.01)
 
 
     except KeyboardInterrupt:
