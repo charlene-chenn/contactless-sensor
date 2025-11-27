@@ -67,6 +67,12 @@ def read_stream_to_queue(stream, queue_obj, stream_type):
             break
     print(f"{stream_type} stream finished.")
 
+def print_stream_errors(stream, stream_name):
+    """Reads lines from a stream and prints them as errors."""
+    for line in iter(stream.readline, b''):
+        print(f"[{stream_name} ERROR] {line.decode(errors='ignore').strip()}")
+    stream.close()
+
 def main():
     """
     Main function to run the data logger.
@@ -112,7 +118,7 @@ def main():
         angle_queue = queue.Queue()
         serial_queue = queue.Queue()
 
-        # Start threads to read from subprocess and serial port
+        # Start threads to read from subprocess stdout, stderr and serial port
         angle_thread = threading.Thread(
             target=read_stream_to_queue,
             args=(angle_process.stdout, angle_queue, 'angle_process'),
@@ -123,8 +129,14 @@ def main():
             args=(ser, serial_queue, 'serial'),
             daemon=True
         )
+        stderr_thread = threading.Thread(
+            target=print_stream_errors,
+            args=(angle_process.stderr, 'angle_process'),
+            daemon=True
+        )
         angle_thread.start()
         serial_thread.start()
+        stderr_thread.start()
 
         # Open CSV file for writing
         with open(OUTPUT_CSV_FILE, 'w', newline='') as csvfile:
@@ -171,6 +183,8 @@ def main():
                 # Check if the subprocess has terminated
                 if angle_process.poll() is not None:
                     print("Angle measurement process has terminated.")
+                    # Give stderr thread a moment to print any final errors
+                    time.sleep(0.1)
                     break
                 
                 # Small delay to prevent a busy loop and reduce CPU usage
