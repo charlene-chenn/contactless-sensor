@@ -29,24 +29,28 @@ def load_config():
 def read_stream_to_queue(stream, queue_obj, stream_type):
     """
     Reads lines from a stream (subprocess stdout or serial)
-    and puts them into a queue. For serial streams, it robustly
-    decodes and parses the data.
+    and puts them into a queue.
     """
     is_serial = isinstance(stream, serial.Serial)
     
-    while not stream.closed:
-        try:
-            line_bytes = stream.readline()
-            if not line_bytes:
-                if stream.closed or (is_serial and not stream.is_open):
-                    break
-                continue
+    # Use iter(stream.readline, '') for text streams from subprocess
+    # Use a manual while loop for byte streams from serial
+    iterator = iter(stream.readline, '') if not is_serial else iter(lambda: True, False)
 
-            line_str = line_bytes.decode(errors='ignore').strip()
-            
+    for line in iterator:
+        try:
+            if is_serial:
+                line_bytes = stream.readline()
+                if not line_bytes:
+                    if stream.closed or not stream.is_open:
+                        break
+                    continue
+                line_str = line_bytes.decode(errors='ignore').strip()
+            else:
+                line_str = line.strip()
+
             if line_str:
                 try:
-                    # All streams are expected to produce a float value
                     parts = line_str.split(',')
                     value_str = parts[-1]
                     value = float(value_str)
@@ -54,7 +58,6 @@ def read_stream_to_queue(stream, queue_obj, stream_type):
                 except (ValueError, IndexError):
                     # print(f"Warning: Could not parse value from {stream_type}: {line_str}")
                     continue
-
         except Exception as e:
             if not (is_serial and not stream.is_open):
                 print(f"Error reading from {stream_type}: {e}")
@@ -62,9 +65,9 @@ def read_stream_to_queue(stream, queue_obj, stream_type):
     print(f"{stream_type} stream finished.")
 
 def print_stream_errors(stream, stream_name):
-    """Reads lines from a stream and prints them as errors."""
-    for line in iter(stream.readline, b''):
-        print(f"[{stream_name} ERROR] {line.decode(errors='ignore').strip()}")
+    """Reads lines from a text stream and prints them as errors."""
+    for line in iter(stream.readline, ''):
+        print(f"[{stream_name} ERROR] {line.strip()}")
     stream.close()
 
 def main():
@@ -74,6 +77,8 @@ def main():
     parser = argparse.ArgumentParser(description='Log data from a vision sensor and a serial device.')
     parser.add_argument('--output-file', type=str, default='sensor_log.csv',
                         help='Name of the CSV file to save logs to (default: sensor_log.csv)')
+    parser.add_argument('--vision-debug', action='store_true',
+                        help='Enable the UI for the vision process for debugging purposes.')
     args = parser.parse_args()
 
     OUTPUT_CSV_FILE = args.output_file
@@ -85,13 +90,21 @@ def main():
 
     try:
         # Start the vision measurement script as a subprocess
-        print("Starting headless vision sensor process...")
-        # Generalized command for vision process
-        vision_process_cmd = ["python3", "-m", "src.main", "--output-angle", "--no-ui"]
+        # Use python's -u flag for unbuffered output, which is crucial for pipes
+        base_cmd = ["python3", "-u", "-m", "src.main", "--output-angle"]
+        if args.vision_debug:
+            print("Starting vision sensor process in DEBUG mode (UI enabled)...")
+            vision_process_cmd = base_cmd
+        else:
+            print("Starting headless vision sensor process...")
+            vision_process_cmd = base_cmd + ["--no-ui"]
+        
         vision_process = subprocess.Popen(
             vision_process_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            text=True,  # Open streams in text mode, handles decoding
+            bufsize=1   # Use line-buffering
         )
 
         time.sleep(3)
