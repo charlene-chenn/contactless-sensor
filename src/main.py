@@ -63,20 +63,22 @@ def main():
             angle = None
             if mode == 'two_balls':
                 # Detect balls
-                pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
-                moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+                pivot_center, _ = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
+                moving_center, moving_mask = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
                 if pivot_center and moving_center:
                     angle = calculate_angle(pivot_center, moving_center)
                 if not args.no_ui:
-                    display_frame(frame, pivot_center=pivot_center, moving_center=moving_center)
+                    # Pass the moving ball's mask to the UI for debugging
+                    display_frame(frame, pivot_center=pivot_center, moving_center=moving_center, mask=moving_mask)
 
             elif mode == 'rod_and_ball':
                 rod_endpoints = find_rod(frame, lower_rod_hsv, upper_rod_hsv)
-                moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+                # TODO: The mask for the rod or second ball could also be displayed
+                moving_center, moving_mask = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
                 if rod_endpoints:
                     angle = calculate_rod_angle(rod_endpoints)
                 if not args.no_ui:
-                    display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints)
+                    display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints, mask=moving_mask)
 
             if args.output_angle and angle is not None:
                 print(f"{angle:.2f}")
