@@ -1,17 +1,19 @@
+import argparse
 import csv
 import json
+import queue
 import subprocess
-import serial
+import threading
 import time
 from datetime import datetime
-import threading
-import queue
-import argparse
+
+import serial
 
 # --- Configuration ---
 CONFIG_FILE = 'config.json'
 # New, more flexible field names
 FIELDNAMES = ['timestamp', 'source', 'measurement']
+
 
 def load_config():
     """Loads serial configuration from the config file."""
@@ -26,13 +28,14 @@ def load_config():
         print(f"Error: {CONFIG_FILE} not found. Using default serial settings.")
         return '/dev/tty.usbmodem14201', 9600
 
+
 def read_stream_to_queue(stream, queue_obj, stream_type):
     """
     Reads lines from a stream (subprocess stdout or serial)
     and puts them into a queue.
     """
     is_serial = isinstance(stream, serial.Serial)
-    
+
     # Use iter(stream.readline, '') for text streams from subprocess
     # Use a manual while loop for byte streams from serial
     iterator = iter(stream.readline, '') if not is_serial else iter(lambda: True, False)
@@ -64,11 +67,13 @@ def read_stream_to_queue(stream, queue_obj, stream_type):
             break
     print(f"{stream_type} stream finished.")
 
+
 def print_stream_errors(stream, stream_name):
     """Reads lines from a text stream and prints them as errors."""
     for line in iter(stream.readline, ''):
         print(f"[{stream_name} ERROR] {line.strip()}")
     stream.close()
+
 
 def main():
     """
@@ -98,7 +103,7 @@ def main():
         else:
             print("Starting headless vision sensor process...")
             vision_process_cmd = base_cmd + ["--no-ui"]
-        
+
         vision_process = subprocess.Popen(
             vision_process_cmd,
             stdout=subprocess.PIPE,
@@ -157,7 +162,6 @@ def main():
                         'source': 'vision_sensor',
                         'measurement': f"{measurement:.4f}"
                     })
-                    print(f"Logged: vision_sensor, {measurement:.4f}")
                 except queue.Empty:
                     pass
 
@@ -169,7 +173,6 @@ def main():
                         'source': 'ground_truth_serial',
                         'measurement': f"{measurement:.4f}"
                     })
-                    print(f"Logged: ground_truth_serial, {measurement:.4f}")
                 except queue.Empty:
                     pass
 
@@ -177,8 +180,8 @@ def main():
                     print("Vision sensor process has terminated.")
                     time.sleep(0.1)
                     break
-                
-                time.sleep(0.001) # Small sleep to prevent busy-waiting
+
+                time.sleep(0.001)  # Small sleep to prevent busy-waiting
 
     except KeyboardInterrupt:
         print("\nStopping data logger...")
@@ -194,6 +197,6 @@ def main():
             print("Serial port closed.")
         print("Data logging finished.")
 
+
 if __name__ == "__main__":
     main()
-
