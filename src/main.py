@@ -1,20 +1,29 @@
+import argparse
 import json
+
 import numpy as np
+
+from .calculation import calculate_angle, calculate_rod_angle
 from .camera import Camera
 from .detection import find_ball, find_rod
-from .ui import display_frame, handle_input, destroy_windows
+from .ui import destroy_windows, display_frame, handle_input
+
 
 def main():
     """
     Main function for the contactless sensor application.
     """
+    parser = argparse.ArgumentParser(description='Contactless sensor application.')
+    parser.add_argument('--output-angle', action='store_true', help='Output the angle to the console.')
+    args = parser.parse_args()
+
     # Load configuration
     with open('config.json', 'r') as f:
         config = json.load(f)
 
     camera_index = config.get('camera_index', 0)
     mode = config.get('mode', 'two_balls')
-    
+
     # Initialize camera
     camera = Camera(camera_index)
     if not camera.initialize():
@@ -22,7 +31,7 @@ def main():
         camera_index = Camera.select_camera(config)
         if camera_index is None:
             return
-        
+
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=4)
 
@@ -49,16 +58,24 @@ def main():
         if not ret:
             break
 
+        angle = None
         if mode == 'two_balls':
             # Detect balls
             pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
             moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+            if pivot_center and moving_center:
+                angle = calculate_angle(pivot_center, moving_center)
             display_frame(frame, pivot_center=pivot_center, moving_center=moving_center)
-        
+
         elif mode == 'rod_and_ball':
             rod_endpoints = find_rod(frame, lower_rod_hsv, upper_rod_hsv)
             moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+            if rod_endpoints:
+                angle = calculate_rod_angle(rod_endpoints)
             display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints)
+
+        if args.output_angle and angle is not None:
+            print(f"{angle:.2f}")
 
         # Handle input
         if handle_input():
@@ -67,6 +84,7 @@ def main():
     # Release resources
     camera.release()
     destroy_windows()
+
 
 if __name__ == "__main__":
     main()
