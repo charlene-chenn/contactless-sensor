@@ -64,9 +64,9 @@ def main():
     ser = None
 
     try:
-        # Start the angle measurement script as a subprocess
-        print("Starting angle measurement process...")
-        angle_process_cmd = ["python3", "-m", "src.main", "--output-angle"]
+        # Start the angle measurement script as a subprocess, with no UI
+        print("Starting headless angle measurement process...")
+        angle_process_cmd = ["python3", "-m", "src.main", "--output-angle", "--no-ui"]
         angle_process = subprocess.Popen(
             angle_process_cmd,
             stdout=subprocess.PIPE,
@@ -119,17 +119,10 @@ def main():
                 # Get the latest data from queues, but don't block
                 try:
                     angle_line = angle_queue.get_nowait()
-                    # The user mentioned changing the logging to output just the number
-                    # But the previous change included text. Let's handle both
-                    # "Angle: 12.34 degrees" -> "12.34"
                     try:
-                        last_angle = float(angle_line.split(':')[1].strip().split(' ')[0])
-                    except (IndexError, ValueError):
-                        # Assume it's just a number
-                        try:
-                            last_angle = float(angle_line)
-                        except ValueError:
-                            print(f"Could not parse angle value: {angle_line}")
+                        last_angle = float(angle_line)
+                    except ValueError:
+                        print(f"Could not parse angle value: {angle_line}")
                 except queue.Empty:
                     pass # No new angle data, use the last one
 

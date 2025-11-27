@@ -14,7 +14,8 @@ def main():
     Main function for the contactless sensor application.
     """
     parser = argparse.ArgumentParser(description='Contactless sensor application.')
-    parser.add_argument('--output-angle', action='store_true', help='Output the angle to the console.')
+    parser.add_argument('--output-angle', action='store_true', help='Output the angle to the console as a raw float.')
+    parser.add_argument('--no-ui', action='store_true', help='Disable the graphical user interface.')
     args = parser.parse_args()
 
     # Load configuration
@@ -52,38 +53,46 @@ def main():
     lower_rod_hsv = np.array(rod_color.get('lower', [0, 0, 0]))
     upper_rod_hsv = np.array(rod_color.get('upper', [179, 255, 255]))
 
-    while True:
-        # Read frame
-        ret, frame = camera.read_frame()
-        if not ret:
-            break
+    try:
+        while True:
+            # Read frame
+            ret, frame = camera.read_frame()
+            if not ret:
+                break
 
-        angle = None
-        if mode == 'two_balls':
-            # Detect balls
-            pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
-            moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
-            if pivot_center and moving_center:
-                angle = calculate_angle(pivot_center, moving_center)
-            display_frame(frame, pivot_center=pivot_center, moving_center=moving_center)
+            angle = None
+            if mode == 'two_balls':
+                # Detect balls
+                pivot_center = find_ball(frame, lower_pivot_hsv, upper_pivot_hsv)
+                moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+                if pivot_center and moving_center:
+                    angle = calculate_angle(pivot_center, moving_center)
+                if not args.no_ui:
+                    display_frame(frame, pivot_center=pivot_center, moving_center=moving_center)
 
-        elif mode == 'rod_and_ball':
-            rod_endpoints = find_rod(frame, lower_rod_hsv, upper_rod_hsv)
-            moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
-            if rod_endpoints:
-                angle = calculate_rod_angle(rod_endpoints)
-            display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints)
+            elif mode == 'rod_and_ball':
+                rod_endpoints = find_rod(frame, lower_rod_hsv, upper_rod_hsv)
+                moving_center = find_ball(frame, lower_moving_hsv, upper_moving_hsv)
+                if rod_endpoints:
+                    angle = calculate_rod_angle(rod_endpoints)
+                if not args.no_ui:
+                    display_frame(frame, moving_center=moving_center, rod_endpoints=rod_endpoints)
 
-        if args.output_angle and angle is not None:
-            print(f"{angle:.2f}")
+            if args.output_angle and angle is not None:
+                print(f"{angle:.2f}")
 
-        # Handle input
-        if handle_input():
-            break
-
-    # Release resources
-    camera.release()
-    destroy_windows()
+            # Handle input for UI
+            if not args.no_ui:
+                if handle_input():
+                    break
+    except KeyboardInterrupt:
+        # This allows the main loop to be stopped with Ctrl+C when running without UI
+        pass
+    finally:
+        # Release resources
+        camera.release()
+        if not args.no_ui:
+            destroy_windows()
 
 
 if __name__ == "__main__":
