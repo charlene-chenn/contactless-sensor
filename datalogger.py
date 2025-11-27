@@ -28,22 +28,42 @@ def load_config():
 def read_stream_to_queue(stream, queue_obj, stream_type):
     """
     Reads lines from a stream (subprocess stdout or serial)
-    and puts them into a queue.
+    and puts them into a queue. For serial streams, it robustly
+    decodes and parses the data.
     """
+    is_serial = isinstance(stream, serial.Serial)
+    
     while not stream.closed:
         try:
-            line = stream.readline()
-            if not line:
-                break
-            # For subprocess, output is bytes, so decode it
-            if isinstance(line, bytes):
-                line = line.decode('utf-8')
+            line_bytes = stream.readline()
+            if not line_bytes:
+                # If stream is closed or times out, exit thread
+                if stream.closed or (is_serial and not stream.is_open):
+                    break
+                continue
+
+            # Robustly decode, ignoring errors, and strip whitespace
+            line_str = line_bytes.decode(errors='ignore').strip()
             
-            line = line.strip()
-            if line:
-                queue_obj.put(line)
+            if line_str:
+                if is_serial:
+                    # For serial, parse to float here to discard invalid lines
+                    try:
+                        # Handle "ID,value" or just "value"
+                        parts = line_str.split(',')
+                        value_str = parts[-1]
+                        value = float(value_str)
+                        queue_obj.put(value)
+                    except (ValueError, IndexError):
+                        # print(f"Warning: Could not parse serial value: {line_str}")
+                        continue # Ignore lines that are not valid floats
+                else:
+                    # For subprocess, just put the string on the queue
+                    queue_obj.put(line_str)
+
         except Exception as e:
-            print(f"Error reading from {stream_type}: {e}")
+            if not (is_serial and not stream.is_open):
+                print(f"Error reading from {stream_type}: {e}")
             break
     print(f"{stream_type} stream finished.")
 
@@ -71,7 +91,7 @@ def main():
             angle_process_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=False  # Work with bytes
+            # No text mode, we handle decoding manually for robustness
         )
 
         # Give the camera process a moment to initialize
@@ -118,6 +138,7 @@ def main():
             while True:
                 # Get the latest data from queues, but don't block
                 try:
+                    # Angle is still a string from the subprocess
                     angle_line = angle_queue.get_nowait()
                     try:
                         last_angle = float(angle_line)
@@ -127,15 +148,12 @@ def main():
                     pass # No new angle data, use the last one
 
                 try:
-                    serial_line = serial_queue.get_nowait()
-                    try:
-                        last_wind_speed = float(serial_line)
-                    except ValueError:
-                         print(f"Could not parse wind speed value: {serial_line}")
+                    # Serial data is already a float
+                    last_wind_speed = serial_queue.get_nowait()
                 except queue.Empty:
                     pass # No new serial data, use the last one
 
-                # Write a row if we have at least one value for each
+                # Write a row only when we have a fresh reading from both
                 if last_angle is not None and last_wind_speed is not None:
                     writer.writerow({
                         'timestamp': datetime.now().isoformat(),
@@ -152,8 +170,8 @@ def main():
                     print("Angle measurement process has terminated.")
                     break
                 
-                # Small delay to prevent a busy loop
-                time.sleep(0.1)
+                # Small delay to prevent a busy loop and reduce CPU usage
+                time.sleep(0.05)
 
 
     except KeyboardInterrupt:
