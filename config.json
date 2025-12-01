@@ -42,5 +42,12 @@
     "serial": {
         "port": "/dev/tty.usbmodem14201",
         "baud_rate": 9600
+    },
+    "conversion_params": {
+        "scale_constant": 11.498098382964058
+    },
+    "butterworth_filter": {
+        "cutoff_hz": 0.7000000000000002,
+        "order": 2
     }
 }
