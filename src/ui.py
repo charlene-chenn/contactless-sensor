@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
-from .calculation import calculate_angle, calculate_rod_angle
 
-def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: tuple = None, rod_endpoints: tuple = None, mask: np.ndarray = None):
+def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: tuple = None, rod_endpoints: tuple = None, mask: np.ndarray = None, angle: float = None, wind_speed: float = None, arrow_scale: int = 10):
     """
     Displays the camera frame with optional overlays for ball centers and mask.
 
@@ -11,14 +10,17 @@ def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: 
     :param moving_center: Coordinates (x, y) of the moving ball center.
     :param rod_endpoints: Endpoints of the detected rod.
     :param mask: The mask generated during ball detection.
+    :param angle: The calculated angle to display.
+    :param wind_speed: The calculated wind speed to display and visualise.
+    :param arrow_scale: The scaling factor for the wind speed arrow.
     """
     display_image = frame.copy()
 
     if rod_endpoints:
         (x1, y1), (x2, y2) = rod_endpoints
         cv2.line(display_image, (x1, y1), (x2, y2), (0, 255, 255), 2) # Yellow line for the rod
-        angle = calculate_rod_angle(rod_endpoints)
-        cv2.putText(display_image, f"Angle: {angle:.2f} degrees", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        if angle is not None:
+            cv2.putText(display_image, f"Angle: {angle:.2f} degrees", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         
         # Draw vertical line from pivot
         pivot_x, pivot_y = (x1, y1) if y1 < y2 else (x2, y2)
@@ -48,9 +50,18 @@ def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: 
             # Draw line between balls
             cv2.line(display_image, pivot_center, moving_center, (255, 0, 0), 2) # Blue line connecting balls
 
-            # Calculate and display angle
-            angle = calculate_angle(pivot_center, moving_center)
-            cv2.putText(display_image, f"Angle: {angle:.2f} degrees", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            # Display wind speed or angle
+            if wind_speed is not None:
+                cv2.putText(display_image, f"Wind Speed: {wind_speed:.2f} m/s", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            elif angle is not None:
+                cv2.putText(display_image, f"Angle: {angle:.2f} degrees", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            # Draw wind speed arrow
+            if moving_center and wind_speed is not None:
+                start_point = moving_center
+                arrow_length = int(wind_speed * arrow_scale)
+                end_point = (start_point[0] + arrow_length, start_point[1])
+                cv2.arrowedLine(display_image, start_point, end_point, (0, 255, 255), 2, tipLength=0.3)
 
 
     cv2.imshow("Camera Feed", display_image)
@@ -74,3 +85,4 @@ def destroy_windows():
     Destroys all OpenCV created windows.
     """
     cv2.destroyAllWindows()
+
