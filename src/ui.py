@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: tuple = None, rod_endpoints: tuple = None, mask: np.ndarray = None, angle: float = None, wind_speed: float = None, arrow_scale: int = 10):
+def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: tuple = None, rod_endpoints: tuple = None, mask: np.ndarray = None, angle: float = None, wind_speed: float = None, arrow_scale: int = 10, fps: float = None):
     """
     Displays the camera frame with optional overlays for ball centers and mask.
 
@@ -13,8 +13,12 @@ def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: 
     :param angle: The calculated angle to display.
     :param wind_speed: The calculated wind speed to display and visualise.
     :param arrow_scale: The scaling factor for the wind speed arrow.
+    :param fps: The current frames per second of the application.
     """
     display_image = frame.copy()
+
+    if fps is not None:
+        cv2.putText(display_image, f"FPS: {fps:.1f}", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
     if rod_endpoints:
         (x1, y1), (x2, y2) = rod_endpoints
@@ -35,7 +39,7 @@ def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: 
             # Draw vertical line
             cv2.line(display_image, pivot_center, (pivot_center[0], frame.shape[0]), (255, 255, 255), 1) # White vertical line
         else:
-            cv2.putText(display_image, "Pivot ball not detected", (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.putText(display_image, "Pivot ball not detected", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
 
         if moving_center:
@@ -43,7 +47,7 @@ def display_frame(frame: np.ndarray, pivot_center: tuple = None, moving_center: 
             cv2.putText(display_image, f"Moving: {moving_center}", (moving_center[0] + 10, moving_center[1] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
         else:
-            cv2.putText(display_image, "Moving ball not detected", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.putText(display_image, "Moving ball not detected", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
 
         if pivot_center and moving_center:

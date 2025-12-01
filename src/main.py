@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 
 import numpy as np
 from scipy import signal
@@ -46,9 +47,7 @@ def main():
     arrow_scale = config.get('ui', {}).get('arrow_scale_factor', 10)
 
     # Initialize camera
-
     camera = Camera(camera_index, fps=camera_fps)
-
     camera.initialize()  # Assuming this is always successful after potential selection
 
     # Initialize filter for real-time processing
@@ -56,6 +55,10 @@ def main():
     if filter_params:
         sos = signal.butter(filter_params['order'], filter_params['cutoff_hz'], 'low', fs=camera_fps, output='sos')
         zi = signal.sosfilt_zi(sos)
+
+    # Initialize FPS calculation variables
+    prev_time = 0
+    display_fps = 0
 
     try:
         while True:
@@ -85,6 +88,13 @@ def main():
                     smoothed_output, zi = signal.sosfilt(sos, [wind_speed], zi=zi)
                     smoothed_wind_speed = smoothed_output[0]
 
+            # Calculate and smooth FPS
+            current_time = time.time()
+            if prev_time > 0:
+                fps = 1 / (current_time - prev_time)
+                display_fps = 0.9 * display_fps + 0.1 * fps
+            prev_time = current_time
+
             # Output to console if requested
             if args.output == 'angle' and angle is not None:
                 print(f"{angle:.2f}")
@@ -95,7 +105,7 @@ def main():
             if not args.no_ui:
                 display_frame(frame, pivot_center=pivot_center, moving_center=moving_center,
                               rod_endpoints=rod_endpoints, mask=moving_mask, angle=angle,
-                              wind_speed=smoothed_wind_speed, arrow_scale=arrow_scale)
+                              wind_speed=smoothed_wind_speed, arrow_scale=arrow_scale, fps=display_fps)
                 if handle_input():
                     break
 
