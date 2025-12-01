@@ -14,13 +14,15 @@ class Camera:
     A class to handle camera operations for both standard USB cameras and Raspberry Pi cameras.
     """
 
-    def __init__(self, camera_index: int):
+    def __init__(self, camera_index: int, fps: int = 30):
         """
         Initializes the camera.
 
         :param camera_index: The index of the camera to use.
+        :param fps: The desired frame rate.
         """
         self.camera_index = camera_index
+        self.fps = fps
         self.is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
 
         if self.is_rpi and Picamera2:
@@ -36,7 +38,10 @@ class Camera:
         """
         if self.is_rpi and Picamera2:
             try:
-                config = self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
+                config = self.picam2.create_preview_configuration(
+                    main={"format": "RGB888", "size": (640, 480)},
+                    controls={"FrameRate": self.fps}
+                )
                 self.picam2.configure(config)
                 self.picam2.start()
                 time.sleep(0.3)  # Warm-up for AE/AWB
@@ -46,7 +51,10 @@ class Camera:
                 return False
         else:
             self.cap = cv2.VideoCapture(self.camera_index)
-            return self.cap.isOpened()
+            if self.cap.isOpened():
+                self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+                return True
+            return False
 
     def read_frame(self):
         """

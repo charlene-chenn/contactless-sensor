@@ -46,7 +46,9 @@ def main():
     arrow_scale = config.get('ui', {}).get('arrow_scale_factor', 10)
 
     # Initialize camera
-    camera = Camera(camera_index)
+
+    camera = Camera(camera_index, fps=camera_fps)
+
     camera.initialize()  # Assuming this is always successful after potential selection
 
     # Initialize filter for real-time processing
