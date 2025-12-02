@@ -1,4 +1,5 @@
 import argparse
+import collections
 import csv
 import json
 import queue
@@ -7,6 +8,7 @@ import threading
 import time
 from datetime import datetime
 
+import matplotlib.pyplot as plt
 import serial
 
 # --- Configuration ---
@@ -84,6 +86,8 @@ def main():
                         help='Name of the CSV file to save logs to (default: sensor_log.csv)')
     parser.add_argument('--vision-debug', action='store_true',
                         help='Enable the UI for the vision process for debugging purposes.')
+    parser.add_argument('--plot', action='store_true',
+                        help='Enable a live plot of the sensor data.')
     args = parser.parse_args()
 
     OUTPUT_CSV_FILE = args.output_file
@@ -93,10 +97,23 @@ def main():
     vision_process = None
     ser = None
 
+    # --- Plotting setup ---
+    if args.plot:
+        plt.ion()
+        fig, ax = plt.subplots()
+        vision_data = collections.deque(maxlen=50)
+        serial_data = collections.deque(maxlen=50)
+        vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
+        serial_line, = ax.plot([], [], 'b-', label='Ground Truth (Serial)')
+        ax.legend()
+        ax.set_xlabel('Time (samples)')
+        ax.set_ylabel('Measurement')
+        ax.set_title('Live Sensor Data')
+
     try:
         # Start the vision measurement script as a subprocess
         # Use python's -u flag for unbuffered output, which is crucial for pipes
-        base_cmd = ["python3", "-u", "-m", "src.main", "--output-angle"]
+        base_cmd = ["python3", "-u", "-m", "src.main", "--output", "windspeed"]
         if args.vision_debug:
             print("Starting vision sensor process in DEBUG mode (UI enabled)...")
             vision_process_cmd = base_cmd
@@ -122,6 +139,8 @@ def main():
             print("Serial port connected.")
         except serial.SerialException as e:
             print(f"Error: Could not open serial port {serial_port}: {e}")
+            if args.plot:
+                plt.close(fig)
             return
 
         # Queues to hold data from the threads
@@ -153,6 +172,8 @@ def main():
             writer.writeheader()
             print(f"Logging data to {OUTPUT_CSV_FILE}. Press Ctrl+C to stop.")
 
+            update_plot_counter = 0
+
             while True:
                 # Check for new vision sensor data
                 try:
@@ -162,6 +183,8 @@ def main():
                         'source': 'vision_sensor',
                         'measurement': f"{measurement:.4f}"
                     })
+                    if args.plot:
+                        vision_data.append(measurement)
                 except queue.Empty:
                     pass
 
@@ -173,8 +196,29 @@ def main():
                         'source': 'ground_truth_serial',
                         'measurement': f"{measurement:.4f}"
                     })
+                    if args.plot:
+                        serial_data.append(measurement)
                 except queue.Empty:
                     pass
+
+                # Update the plot periodically
+                if args.plot:
+                    update_plot_counter += 1
+                    if update_plot_counter >= 10: # Update plot every 10 iterations
+                        update_plot_counter = 0
+
+                        if vision_data:
+                            vision_line.set_xdata(range(len(vision_data)))
+                            vision_line.set_ydata(vision_data)
+                        if serial_data:
+                            serial_line.set_xdata(range(len(serial_data)))
+                            serial_line.set_ydata(serial_data)
+
+                        ax.relim()
+                        ax.autoscale_view()
+                        fig.canvas.draw()
+                        fig.canvas.flush_events()
+
 
                 if vision_process.poll() is not None:
                     print("Vision sensor process has terminated.")
@@ -188,6 +232,8 @@ def main():
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     finally:
+        if args.plot:
+            plt.close(fig)
         if vision_process:
             print("Terminating vision sensor process.")
             vision_process.terminate()
