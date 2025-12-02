@@ -208,15 +208,15 @@ def main():
                     if update_plot_counter >= 10:  # Update plot every 10 iterations
                         update_plot_counter = 0
 
-                        if vision_data:
-                            vision_line.set_xdata(range(len(vision_data)))
-                            vision_line.set_ydata(vision_data)
-                        if serial_data:
-                            serial_line.set_xdata(range(len(serial_data)))
-                            serial_line.set_ydata(serial_data)
+                        ax.clear()
+                        ax.plot(vision_data, 'r-', label='Vision Sensor')
+                        ax.plot(serial_data, 'b-', label='Ground Truth (Serial)')
+                        ax.legend()
+                        ax.set_xlabel('Time (samples)')
+                        ax.set_ylabel('Measurement')
+                        ax.set_title('Live Sensor Data')
+                        ax.set_ylim(0, 10)
 
-                        ax.relim()
-                        ax.autoscale_view()
                         fig.canvas.draw()
                         fig.canvas.flush_events()
 
