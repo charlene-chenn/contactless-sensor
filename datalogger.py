@@ -101,6 +101,7 @@ def main():
     if args.plot:
         plt.ion()
         fig, ax = plt.subplots()
+        ax.set_ylim(0, 10)
         vision_data = collections.deque(maxlen=50)
         serial_data = collections.deque(maxlen=50)
         vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
@@ -204,7 +205,7 @@ def main():
                 # Update the plot periodically
                 if args.plot:
                     update_plot_counter += 1
-                    if update_plot_counter >= 10: # Update plot every 10 iterations
+                    if update_plot_counter >= 10:  # Update plot every 10 iterations
                         update_plot_counter = 0
 
                         if vision_data:
@@ -218,7 +219,6 @@ def main():
                         ax.autoscale_view()
                         fig.canvas.draw()
                         fig.canvas.flush_events()
-
 
                 if vision_process.poll() is not None:
                     print("Vision sensor process has terminated.")
