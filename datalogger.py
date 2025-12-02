@@ -102,15 +102,15 @@ def main():
         plt.ion()
         fig, ax = plt.subplots()
         ax.set_ylim(0, 10)
-        ax.set_xlim(0, 50)
         vision_data = collections.deque(maxlen=50)
         serial_data = collections.deque(maxlen=50)
         vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
         serial_line, = ax.plot([], [], 'bo-', markersize=3, label='Ground Truth (Serial)')
         ax.legend()
-        ax.set_xlabel('Time (samples)')
+        ax.set_xlabel('Time (s)')
         ax.set_ylabel('Measurement')
         ax.set_title('Live Sensor Data')
+        start_time = time.time()
 
     try:
         # Start the vision measurement script as a subprocess
@@ -180,26 +180,28 @@ def main():
                 # Check for new vision sensor data
                 try:
                     measurement = vision_queue.get_nowait()
+                    timestamp = time.time()
                     writer.writerow({
-                        'timestamp': datetime.now().isoformat(),
+                        'timestamp': datetime.fromtimestamp(timestamp).isoformat(),
                         'source': 'vision_sensor',
                         'measurement': f"{measurement:.4f}"
                     })
                     if args.plot:
-                        vision_data.append(measurement)
+                        vision_data.append((timestamp, measurement))
                 except queue.Empty:
                     pass
 
                 # Check for new serial data
                 try:
                     measurement = serial_queue.get_nowait()
+                    timestamp = time.time()
                     writer.writerow({
-                        'timestamp': datetime.now().isoformat(),
+                        'timestamp': datetime.fromtimestamp(timestamp).isoformat(),
                         'source': 'ground_truth_serial',
                         'measurement': f"{measurement:.4f}"
                     })
                     if args.plot:
-                        serial_data.append(measurement)
+                        serial_data.append((timestamp, measurement))
                 except queue.Empty:
                     pass
 
@@ -209,11 +211,17 @@ def main():
                     if update_plot_counter >= 10:  # Update plot every 10 iterations
                         update_plot_counter = 0
 
-                        vision_line.set_xdata(range(len(vision_data)))
-                        vision_line.set_ydata(list(vision_data))
-                        serial_line.set_xdata(range(len(serial_data)))
-                        serial_line.set_ydata(list(serial_data))
+                        if vision_data:
+                            vision_x, vision_y = zip(*vision_data)
+                            vision_line.set_xdata([t - start_time for t in vision_x])
+                            vision_line.set_ydata(vision_y)
+                        if serial_data:
+                            serial_x, serial_y = zip(*serial_data)
+                            serial_line.set_xdata([t - start_time for t in serial_x])
+                            serial_line.set_ydata(serial_y)
 
+                        ax.relim()
+                        ax.autoscale_view()
                         fig.canvas.draw()
                         fig.canvas.flush_events()
 
