@@ -102,8 +102,8 @@ def main():
         plt.ion()
         fig, ax = plt.subplots()
         ax.set_ylim(0, 10)
-        vision_data = collections.deque(maxlen=50)
-        serial_data = collections.deque(maxlen=50)
+        vision_data = collections.deque(maxlen=500)
+        serial_data = collections.deque(maxlen=500)
         vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
         serial_line, = ax.plot([], [], 'bo-', markersize=3, label='Ground Truth (Serial)')
         ax.legend()
@@ -174,7 +174,8 @@ def main():
             writer.writeheader()
             print(f"Logging data to {OUTPUT_CSV_FILE}. Press Ctrl+C to stop.")
 
-            update_plot_counter = 0
+            last_plot_time = time.time()
+            new_data_received = False
 
             while True:
                 # Check for new vision sensor data
@@ -188,6 +189,7 @@ def main():
                     })
                     if args.plot:
                         vision_data.append((timestamp, measurement))
+                        new_data_received = True
                 except queue.Empty:
                     pass
 
@@ -202,28 +204,31 @@ def main():
                     })
                     if args.plot:
                         serial_data.append((timestamp, measurement))
+                        new_data_received = True
                 except queue.Empty:
                     pass
 
                 # Update the plot periodically
-                if args.plot:
-                    update_plot_counter += 1
-                    if update_plot_counter >= 10:  # Update plot every 10 iterations
-                        update_plot_counter = 0
+                now = time.time()
+                if args.plot and new_data_received and (now - last_plot_time > 0.2): # 200ms throttle
+                    last_plot_time = now
+                    new_data_received = False
 
-                        if vision_data:
-                            vision_x, vision_y = zip(*vision_data)
-                            vision_line.set_xdata([t - start_time for t in vision_x])
-                            vision_line.set_ydata(vision_y)
+                    if vision_data:
+                        vision_x, vision_y = zip(*vision_data)
+                        vision_line.set_xdata([t - start_time for t in vision_x])
+                        vision_line.set_ydata(vision_y)
+                    if serial_data:
+                        # Unpack, but check if empty first
                         if serial_data:
                             serial_x, serial_y = zip(*serial_data)
                             serial_line.set_xdata([t - start_time for t in serial_x])
                             serial_line.set_ydata(serial_y)
 
-                        ax.relim()
-                        ax.autoscale_view()
-                        fig.canvas.draw()
-                        fig.canvas.flush_events()
+                    ax.relim()
+                    ax.autoscale_view()
+                    fig.canvas.draw()
+                    fig.canvas.flush_events()
 
                 if vision_process.poll() is not None:
                     print("Vision sensor process has terminated.")
