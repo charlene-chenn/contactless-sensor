@@ -214,16 +214,24 @@ def main():
                     last_plot_time = now
                     new_data_received = False
 
-                    if vision_data:
-                        vision_x, vision_y = zip(*vision_data)
-                        vision_line.set_xdata([t - start_time for t in vision_x])
-                        vision_line.set_ydata(vision_y)
-                    if serial_data:
-                        # Unpack, but check if empty first
-                        if serial_data:
-                            serial_x, serial_y = zip(*serial_data)
-                            serial_line.set_xdata([t - start_time for t in serial_x])
-                            serial_line.set_ydata(serial_y)
+                    vision_x, vision_y, serial_x, serial_y = [], [], [], []
+                    
+                    try:
+                        vision_x_ts, vision_y_data = zip(*vision_data)
+                        vision_x = [t - start_time for t in vision_x_ts]
+                        vision_y = list(vision_y_data)
+                    except ValueError:
+                        pass # Deque is empty
+
+                    try:
+                        serial_x_ts, serial_y_data = zip(*serial_data)
+                        serial_x = [t - start_time for t in serial_x_ts]
+                        serial_y = list(serial_y_data)
+                    except ValueError:
+                        pass # Deque is empty
+
+                    vision_line.set_data(vision_x, vision_y)
+                    serial_line.set_data(serial_x, serial_y)
 
                     ax.relim()
                     ax.autoscale_view()
