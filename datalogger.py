@@ -87,6 +87,8 @@ def main():
                         help='Enable the UI for the vision process for debugging purposes.')
     parser.add_argument('--plot', action='store_true',
                         help='Enable a live plot of the sensor data.')
+    parser.add_argument('--vision-output', type=str, default='windspeed', choices=['windspeed', 'angle'],
+                        help='Specify the output from the vision sensor (windspeed or angle).')
     args = parser.parse_args()
 
     OUTPUT_CSV_FILE = args.output_file
@@ -109,14 +111,14 @@ def main():
         serial_line, = ax.plot([], [], 'bo-', markersize=3, label='Ground Truth (Serial)')
         ax.legend()
         ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Measurement')
+        ax.set_ylabel(args.vision_output.capitalize())
         ax.set_title('Live Sensor Data')
         start_time = time.time()
 
     try:
         # Start the vision measurement script as a subprocess
         # Use python's -u flag for unbuffered output, which is crucial for pipes
-        base_cmd = ["python3", "-u", "-m", "src.main", "--output", "windspeed"]
+        base_cmd = ["python3", "-u", "-m", "src.main", "--output", args.vision_output]
         if args.vision_debug:
             print("Starting vision sensor process in DEBUG mode (UI enabled)...")
             vision_process_cmd = base_cmd
