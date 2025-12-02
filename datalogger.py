@@ -1,5 +1,4 @@
 import argparse
-import collections
 import csv
 import json
 import queue
@@ -102,8 +101,10 @@ def main():
         plt.ion()
         fig, ax = plt.subplots()
         ax.set_ylim(0, 10)
-        vision_data = collections.deque(maxlen=500)
-        serial_data = collections.deque(maxlen=500)
+        # NOTE: Using unbounded lists will consume memory over time.
+        # For long-running sessions, a different data management strategy may be needed.
+        vision_data = []
+        serial_data = []
         vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
         serial_line, = ax.plot([], [], 'bo-', markersize=3, label='Ground Truth (Serial)')
         ax.legend()
