@@ -102,10 +102,11 @@ def main():
         plt.ion()
         fig, ax = plt.subplots()
         ax.set_ylim(0, 10)
+        ax.set_xlim(0, 50)
         vision_data = collections.deque(maxlen=50)
         serial_data = collections.deque(maxlen=50)
         vision_line, = ax.plot([], [], 'r-', label='Vision Sensor')
-        serial_line, = ax.plot([], [], 'b-', label='Ground Truth (Serial)')
+        serial_line, = ax.plot([], [], 'bo-', markersize=3, label='Ground Truth (Serial)')
         ax.legend()
         ax.set_xlabel('Time (samples)')
         ax.set_ylabel('Measurement')
@@ -208,14 +209,10 @@ def main():
                     if update_plot_counter >= 10:  # Update plot every 10 iterations
                         update_plot_counter = 0
 
-                        ax.clear()
-                        ax.plot(vision_data, 'r-', label='Vision Sensor')
-                        ax.plot(serial_data, 'b-', label='Ground Truth (Serial)')
-                        ax.legend()
-                        ax.set_xlabel('Time (samples)')
-                        ax.set_ylabel('Measurement')
-                        ax.set_title('Live Sensor Data')
-                        ax.set_ylim(0, 10)
+                        vision_line.set_xdata(range(len(vision_data)))
+                        vision_line.set_ydata(list(vision_data))
+                        serial_line.set_xdata(range(len(serial_data)))
+                        serial_line.set_ydata(list(serial_data))
 
                         fig.canvas.draw()
                         fig.canvas.flush_events()
