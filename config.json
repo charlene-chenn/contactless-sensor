@@ -45,11 +45,22 @@
         "baud_rate": 9600
     },
     "conversion_params": {
-        "scale_constant": 11.498098382964058
+        "left": {
+            "scale_constant": 11.498098382964058
+        },
+        "right": {
+            "scale_constant": 8.336383392060865
+        }
     },
     "butterworth_filter": {
-        "cutoff_hz": 0.7,
-        "order": 2
+        "left": {
+            "cutoff_hz": 0.7000000000000002,
+            "order": 2
+        },
+        "right": {
+            "cutoff_hz": 1.4500000000000004,
+            "order": 2
+        }
     },
     "ui": {
         "arrow_scale_factor": 15

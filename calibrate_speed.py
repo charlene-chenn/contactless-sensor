@@ -1,5 +1,6 @@
+import argparse
 import json
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -7,7 +8,6 @@ from matplotlib import pyplot as plt
 from scipy import signal
 
 CONFIG_PATH = "./config.json"
-RAW_DATA_CSV = "./calibration_data.csv"
 START_IDX = 2700
 
 
@@ -28,7 +28,7 @@ def analyse_frequencies(dataframes: List[pd.DataFrame], labels: List[str]):
         timestamps_s = data["timestamp"].to_numpy() / 1e9
         sample_spacing_s = (timestamps_s[-1] - timestamps_s[0]) / (N - 1)
         measurements = data["measurement"]
-        
+
         y_freq = 2.0 / N * np.abs(np.fft.fft(measurements)[:N // 2])
         x_freq = np.fft.fftfreq(N, d=sample_spacing_s)[:N // 2]
         analyses.append([x_freq, y_freq])
@@ -43,10 +43,10 @@ def analyse_frequencies(dataframes: List[pd.DataFrame], labels: List[str]):
     plt.show()
 
 
-def load_and_prepare_data() -> (pd.DataFrame, pd.DataFrame):
+def load_and_prepare_data(filepath: str) -> (pd.DataFrame, pd.DataFrame):
     """Loads raw data, splits it, and prepares it for calibration."""
-    raw_data = pd.read_csv(RAW_DATA_CSV, parse_dates=["timestamp"])
-    
+    raw_data = pd.read_csv(filepath, parse_dates=["timestamp"])
+
     vision_sensor_raw = raw_data[raw_data["source"] == "vision_sensor"].astype({"timestamp": "int64"})
     del vision_sensor_raw["source"]
 
@@ -103,7 +103,7 @@ def plot_results(ground_truth: pd.DataFrame, wind_speed: np.ndarray, wind_speed_
     """Plots the time-domain and frequency-domain results."""
     vision_sensor_calibrated = pd.DataFrame({"timestamp": ground_truth["timestamp"], "measurement": wind_speed})
     vision_sensor_smoothed = pd.DataFrame({"timestamp": ground_truth["timestamp"], "measurement": wind_speed_smoothed})
-    
+
     analyse_frequencies([vision_sensor_calibrated, vision_sensor_smoothed, ground_truth], ["Vision", "Vision Smoothed", "GT"])
 
     fig = plt.figure()
@@ -115,18 +115,18 @@ def plot_results(ground_truth: pd.DataFrame, wind_speed: np.ndarray, wind_speed_
     plt.show()
 
 
-def save_results(k_to_save: float, accepted_filter_params: Dict, original_config: Dict):
+def save_results(k_to_save: float, accepted_filter_params: Dict, original_config: Dict, side: str):
     """Handles saving the updated parameters to the config file."""
     should_write_to_file = False
     config_to_write = original_config.copy()
 
     if input("Save K to config.json? [y/N]: ").lower() == "y":
-        config_to_write["conversion_params"]["scale_constant"] = k_to_save
+        config_to_write["conversion_params"][side]["scale_constant"] = k_to_save
         should_write_to_file = True
 
     if accepted_filter_params:
         if input("Save optimised filter parameters to config.json? [y/N]: ").lower() == "y":
-            config_to_write["butterworth_filter"] = {
+            config_to_write["butterworth_filter"][side] = {
                 "cutoff_hz": accepted_filter_params["cutoff"],
                 "order": accepted_filter_params["order"]
             }
@@ -140,15 +140,23 @@ def save_results(k_to_save: float, accepted_filter_params: Dict, original_config
 
 def main():
     """Main function to run the calibration and analysis process."""
+
+    parser = argparse.ArgumentParser(description="Calibrate the sensor on data.")
+    parser.add_argument("--side", type=str, required=True, choices=["left", "right"], help="Chooses which is being calibrated for.")
+
+    args = parser.parse_args()
+
+    calibration_file_path = f"./calibration/{args.side}_tunnel_calibration.csv"
+
     with open(CONFIG_PATH, "r") as json_file:
         config = json.load(json_file)
 
-    vision_interpolated, ground_truth = load_and_prepare_data()
+    vision_interpolated, ground_truth = load_and_prepare_data(calibration_file_path)
     wind_speed, k = calibrate_and_convert_to_windspeed(vision_interpolated, ground_truth)
-    
+
     fs = 1 / ((ground_truth["timestamp"].iloc[1] - ground_truth["timestamp"].iloc[0]) / 1e9)
     ground_truth_measurements = ground_truth["measurement"].to_numpy()
-    
+
     accepted_optimised_params = None
     if input("Run filter parameter optimisation? [y/N]: ").lower() == "y":
         best_params = optimise_filter_parameters(wind_speed, ground_truth_measurements, fs)
@@ -160,10 +168,9 @@ def main():
     wind_speed_smoothed = apply_filter(wind_speed, fs, config["butterworth_filter"])
 
     plot_results(ground_truth, wind_speed, wind_speed_smoothed)
-    
-    save_results(k, accepted_optimised_params, config)
+
+    save_results(k, accepted_optimised_params, config, args.side)
 
 
 if __name__ == "__main__":
     main()
-

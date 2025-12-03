@@ -16,6 +16,7 @@ def main():
     Main function for the contactless sensor application.
     """
     parser = argparse.ArgumentParser(description='Contactless sensor application.')
+    parser.add_argument("--side", type=str, required=True, choices=["left", "right"], help="Tunnel side.")
     parser.add_argument('--output', type=str, choices=['angle', 'windspeed'], help='Choose the output type to print to the console.')
     parser.add_argument('--no-ui', action='store_true', help='Disable the graphical user interface.')
     args = parser.parse_args()
@@ -42,8 +43,8 @@ def main():
     upper_rod_hsv = np.array(rod_color.get('upper', [179, 255, 255]))
 
     # --- Processing and UI Parameters ---
-    k = config.get('conversion_params', {}).get('scale_constant', 1.0)
-    filter_params = config.get('butterworth_filter', {})
+    k = config.get('conversion_params', {}).get(args.side, {}).get('scale_constant', 1.0)
+    filter_params = config.get('butterworth_filter', {}).get(args.side, {})
     arrow_scale = config.get('ui', {}).get('arrow_scale_factor', 10)
 
     # Initialize camera
