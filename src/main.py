@@ -3,6 +3,7 @@ import json
 import time
 
 import numpy as np
+import serial
 from scipy import signal
 
 from .calculation import calculate_angle, calculate_rod_angle
@@ -51,6 +52,14 @@ def main():
     camera = Camera(camera_index, fps=camera_fps)
     camera.initialize()  # Assuming this is always successful after potential selection
 
+    # Initialize serial communication
+    ser = None
+    try:
+        ser = serial.Serial('/dev/serial0', 115200, timeout=1)
+        print("Serial port /dev/serial0 opened successfully.")
+    except serial.SerialException as e:
+        print(f"Error opening serial port: {e}")
+
     # Initialize filter for real-time processing
     sos, zi = None, None
     if filter_params:
@@ -98,9 +107,15 @@ def main():
 
             # Output to console if requested
             if args.output == 'angle' and angle is not None:
-                print(f"{angle:.2f}")
+                output_str = f"{angle:.2f}"
+                print(output_str)
+                if ser:
+                    ser.write((output_str + '\n').encode())
             elif args.output == 'windspeed' and smoothed_wind_speed is not None:
-                print(f"{smoothed_wind_speed:.2f}")
+                output_str = f"{smoothed_wind_speed:.2f}"
+                print(output_str)
+                if ser:
+                    ser.write((output_str + '\n').encode())
 
             # Display UI if not disabled
             if not args.no_ui:
@@ -114,6 +129,9 @@ def main():
         pass
     finally:
         camera.release()
+        if ser and ser.is_open:
+            ser.close()
+            print("Serial port closed.")
         if not args.no_ui:
             destroy_windows()
 
