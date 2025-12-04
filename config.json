@@ -1,48 +1,48 @@
 {
-    "camera_index": 1,
+    "camera_index": 0,
     "camera_fps": 60,
     "mode": "two_balls",
     "ball_colors": {
         "pivot": {
             "lower": [
-                55,
-                118,
-                125
+                64,
+                189,
+                130
             ],
             "upper": [
-                75,
-                218,
-                225
+                84,
+                255,
+                230
             ]
         },
         "moving": {
             "lower": [
-                8,
-                205,
-                179
+                12,
+                184,
+                146
             ],
             "upper": [
-                28,
+                32,
                 255,
-                255
+                246
             ]
         }
     },
     "rod_color": {
         "lower": [
-            0,
-            168,
-            122
+            164,
+            127,
+            57
         ],
         "upper": [
-            12,
-            255,
-            222
+            179,
+            227,
+            157
         ]
     },
     "serial": {
-        "port": "/dev/tty.usbmodem14201",
-        "baud_rate": 9600
+        "port": "/dev/ttyACM0",
+        "baud_rate": 115200
     },
     "conversion_params": {
         "left": {
