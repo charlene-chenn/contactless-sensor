@@ -55,7 +55,7 @@ def main():
     # Initialize serial communication
     ser = None
     try:
-        ser = serial.Serial('/dev/serial0', 115200, timeout=1)
+        ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=1)
         print("Serial port /dev/serial0 opened successfully.")
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
