@@ -36,7 +36,9 @@ contactless-sensor/
 │   └── test_calculation.py
 ├── camera_calibration/   # Camera calibration utilities
 ├── config.json          # Configuration file (colors, camera, serial)
-├── calibrate.py         # Color calibration utility
+├── calibrate_colours.py # HSV color calibration utility
+├── calibrate.py         # Wind speed calibration data collection
+├── calibrate_speed.py   # Wind speed calibration processing
 ├── datalogger.py        # Data logging script
 ├── test_serial.py       # Serial connection testing
 └── requirements.txt     # Python dependencies
@@ -86,11 +88,11 @@ python -m src.main --output-angle --no-ui
 
 ### Color Calibration
 
-Before first use, calibrate the color detection:
+Before first use, calibrate the HSV color ranges for object detection:
 
-1. Run the calibration tool:
+1. Run the color calibration tool:
 ```bash
-python calibrate.py
+python calibrate_colours.py
 ```
 
 2. Click on the object you want to track (pivot ball, moving ball, or rod)
@@ -102,6 +104,29 @@ python calibrate.py
 5. Press `q` to quit
 
 The calibrated colors are automatically saved to `config.json`.
+
+### Wind Speed Calibration
+
+For accurate wind speed measurements, calibrate the angle-to-windspeed conversion:
+
+1. Collect calibration data (requires ground truth sensor connected):
+```bash
+python calibrate.py --side left   # or --side right
+```
+This runs for 40 seconds and saves synchronized vision/ground-truth data.
+
+2. Process the calibration data to determine scaling constants and filter parameters:
+```bash
+python calibrate_speed.py --side left   # or --side right
+```
+This will:
+- Calculate the scaling constant `k` for angle-to-windspeed conversion
+- Optionally optimize Butterworth filter parameters
+- Save parameters to `config.json` for use during measurements
+
+The calibration determines:
+- **Scaling constant**: Converts `angle` → `wind_speed = k × √|tan(angle)|`
+- **Filter parameters**: Smooths measurements while preserving real signal changes
 
 ### Data Logging
 
@@ -192,9 +217,9 @@ python -m pytest tests/
 ### Camera Not Found
 - Check `camera_index` in `config.json`
 - Run the main program to auto-select available camera
-- Ensure camera permissions are granted
-
 ### Poor Detection
+- Use `calibrate_colours.py` to recalibrate HSV color ranges
+- Ensure good lighting conditions
 - Use `calibrate.py` to recalibrate colors
 - Ensure good lighting conditions
 - Adjust HSV ranges for better color matching
