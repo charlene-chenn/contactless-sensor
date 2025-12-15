@@ -111,6 +111,8 @@ def plot_results(ground_truth: pd.DataFrame, wind_speed: np.ndarray, wind_speed_
     ax.plot(ground_truth.index, ground_truth["measurement"], label="GT")
     ax.plot(ground_truth.index, wind_speed, label="Vision")
     ax.plot(ground_truth.index, wind_speed_smoothed, label="Vision Smoothed")
+    ax.set_ylabel("Measurement (m/s)")
+    ax.set_xlabel("Sample Number")
     ax.legend()
     plt.show()
 
