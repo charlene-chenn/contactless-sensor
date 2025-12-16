@@ -1,0 +1,34 @@
+======================================================================
+WIND SENSOR PERFORMANCE ANALYSIS SUMMARY
+======================================================================
+
+1. STANDARD RMSE (All Data)
+----------------------------------------------------------------------
+RMSE:          0.672477 m/s
+Mean Error:    -0.072990 m/s
+Std Dev:       0.668504 m/s
+Samples:       4973
+
+2. RMSE EXCLUDING NEGATIVE GROUND TRUTH VALUES
+----------------------------------------------------------------------
+RMSE:          0.557408 m/s
+Mean Error:    -0.182891 m/s
+Std Dev:       0.526550 m/s
+Samples:       4670
+
+3. RMSE USING UNCERTAINTY BOUNDARIES
+----------------------------------------------------------------------
+RMSE:          0.446722 m/s
+Mean Error:    -0.179270 m/s
+Std Dev:       0.409173 m/s
+Samples:       4973
+Within Bounds: 952 (19.1%)
+
+4. RMSE USING BOUNDARIES, EXCLUDING NEGATIVE GT
+----------------------------------------------------------------------
+RMSE:          0.458373 m/s
+Mean Error:    -0.202059 m/s
+Std Dev:       0.411434 m/s
+Samples:       4670
+Within Bounds: 927 (19.9%)
+
